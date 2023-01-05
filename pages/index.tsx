@@ -1,71 +1,252 @@
-import Head from 'next/head'
-import Image from 'next/image'
-import styles from '../styles/Home.module.css'
+import styles from "../styles/Home.module.css";
+import { useEffect, useState } from "react";
+import { Web3Auth } from "@web3auth/modal";
+import RPC from "./api/web3Rpc";
+import { CHAIN_NAMESPACES, SafeEventEmitterProvider } from "@web3auth/base";
+import { ethers } from "ethers";
+//MultiChain
+import { EthereumPrivateKeyProvider } from "@web3auth/ethereum-provider";
+import Web3 from "web3";
+
+const clientId = "";
 
 export default function Home() {
+  const [web3auth, setWeb3auth] = useState<Web3Auth | null>(null);
+  const [provider, setProvider] = useState<SafeEventEmitterProvider | null>(
+    null
+  );
+  useEffect(() => {
+    // const initEthereum = async () => {
+    //   try {
+    //     const web3auth = new Web3Auth({
+    //       clientId,
+    //       chainConfig: {
+    //         chainNamespace: CHAIN_NAMESPACES.EIP155,
+    //         chainId: "0x1",
+    //         rpcTarget: "https://rpc.ankr.com/eth",
+    //         displayName: "Ethereum TestNet",
+    //         blockExplorer: "https://etherscan.io",
+    //         ticker: "ETH",
+    //         tickerName: "Ethereum", // This is the public RPC we have added, please pass on your own endpoint while creating an app
+    //       },
+    //     });
+    //     setWeb3auth(web3auth);
+    //     await web3auth.initModal();
+    //     setProvider(web3auth.provider);
+    //   } catch (e) {
+    //     console.error(e);
+    //   }
+    // };
+    // // this only initializes the BSC provider
+    // const initBSC = async () => {
+    //   try {
+    //     const web3auth = new Web3Auth({
+    //       clientId: clientId, // get it from Web3Auth Dashboard
+    //       chainConfig: {
+    //         chainNamespace: CHAIN_NAMESPACES.EIP155,
+    //         chainId: "0x38", // hex of 56
+    //         rpcTarget: "https://rpc.ankr.com/bsc",
+    //         displayName: "Binance SmartChain Mainnet",
+    //         blockExplorer: "https://bscscan.com/",
+    //         ticker: "BNB",
+    //         tickerName: "BNB",
+    //       },
+    //     });
+    //     setWeb3auth(web3auth);
+    //     await web3auth.initModal();
+    //     setProvider(web3auth.provider);
+    //   } catch (e) {
+    //     console.log(e);
+    //   }
+    // };
+    const initMultiChain = async () => {
+      try {
+        console.log("INIT MULTICHAIN");
+        const web3auth = new Web3Auth({
+          clientId: clientId,
+          chainConfig: {
+            chainNamespace: CHAIN_NAMESPACES.EIP155,
+            chainId: "0x1",
+          },
+        });
+        setWeb3auth(web3auth);
+        await web3auth.initModal();
+        setProvider(web3auth.provider);
+      } catch (e) {
+        console.log("ERROR");
+        console.log(e);
+      }
+    };
+    initMultiChain();
+  }, []);
+  const changeToBNB = async () => {
+    if (!provider) {
+      throw new Error("Provider not set");
+    }
+    const bnbPrivateKey = provider.request({
+      method: "eth_private_key",
+    });
+    const bnbPrivateKeyProvider = new EthereumPrivateKeyProvider({
+      config: {
+        chainConfig: {
+          chainId: "0x38",
+          rpcTarget: "https://rpc.ankr.com/bsc",
+          displayName: "Binance SmartChain Mainnet",
+          blockExplorer: "https://bscscan.com/",
+          ticker: "BNB",
+          tickerName: "BNB",
+        },
+      },
+    });
+    await bnbPrivateKeyProvider.setupProvider(bnbPrivateKey);
+    setProvider(bnbPrivateKeyProvider.provider);
+  };
+
+  const login = async () => {
+    if (!web3auth) {
+      console.log("web3auth not initialized yet");
+      return;
+    }
+    const web3authProvider = await web3auth.connect();
+    setProvider(web3authProvider);
+  };
+  const getUserInfo = async () => {
+    if (!web3auth) {
+      console.log("web3auth not initialized yet");
+      return;
+    }
+    const user = await web3auth.getUserInfo();
+    console.log(user);
+  };
+
+  const logout = async () => {
+    if (!web3auth) {
+      console.log("web3auth not initialized yet");
+      return;
+    }
+    await web3auth.logout();
+    setProvider(null);
+  };
+
+  const getChainId = async () => {
+    if (!provider) {
+      console.log("provider not initialized yet");
+      return;
+    }
+    const rpc = new RPC(provider);
+    const chainId = await rpc.getChainId();
+    console.log(chainId);
+  };
+  const getAccounts = async () => {
+    if (!provider) {
+      console.log("provider not initialized yet");
+      return;
+    }
+    const rpc = new RPC(provider);
+    const address = await rpc.getAccounts();
+    console.log(JSON.stringify(address));
+  };
+
+  const getBalance = async () => {
+    if (!provider) {
+      console.log("provider not initialized yet");
+      return;
+    }
+    const rpc = new RPC(provider);
+    const balance = await rpc.getBalance();
+    alert(JSON.stringify(balance));
+    console.log(balance);
+  };
+
+  const sendTransaction = async () => {
+    if (!provider) {
+      console.log("provider not initialized yet");
+      return;
+    }
+    const rpc = new RPC(provider);
+    const receipt = await rpc.sendTransaction();
+    console.log(receipt);
+  };
+
+  const signMessage = async () => {
+    if (!provider) {
+      console.log("provider not initialized yet");
+      return;
+    }
+    const rpc = new RPC(provider);
+    const signedMessage = await rpc.signMessage();
+    console.log(signedMessage);
+  };
+
+  const getPrivateKey = async () => {
+    if (!provider) {
+      console.log("provider not initialized yet");
+      return;
+    }
+    const rpc = new RPC(provider);
+    const privateKey = await rpc.getPrivateKey();
+    console.log(privateKey);
+  };
+  const loggedInView = (
+    <>
+      <button onClick={getUserInfo} className="card">
+        Get User Info
+      </button>
+      <button onClick={getChainId} className="card">
+        Get Chain ID
+      </button>
+      <button onClick={getAccounts} className="card">
+        Get Accounts
+      </button>
+      <button onClick={getBalance} className="card">
+        Get Balance
+      </button>
+      <button onClick={sendTransaction} className="card">
+        Send Transaction
+      </button>
+      <button onClick={signMessage} className="card">
+        Sign Message
+      </button>
+      <button onClick={getPrivateKey} className="card">
+        Get Private Key
+      </button>
+      <button onClick={changeToBNB}>Change to Binance Smart Chain</button>
+      <button onClick={logout} className="card">
+        Log Out
+      </button>
+
+      <div id="console" style={{ whiteSpace: "pre-line" }}>
+        <p style={{ whiteSpace: "pre-line" }}></p>
+      </div>
+    </>
+  );
+
+  const unloggedInView = (
+    <button onClick={login} className="card">
+      Login
+    </button>
+  );
+
   return (
-    <div className={styles.container}>
-      <Head>
-        <title>Create Next App</title>
-        <meta name="description" content="Generated by create next app" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
+    <div className="container">
+      <h1 className="title">
+        <a target="_blank" href="http://web3auth.io/" rel="noreferrer">
+          Web3Auth
+        </a>
+        & NextJS Example
+      </h1>
 
-      <main className={styles.main}>
-        <h1 className={styles.title}>
-          Welcome to <a href="https://nextjs.org">Next.js!</a>
-        </h1>
+      <div className="grid">{provider ? loggedInView : unloggedInView}</div>
 
-        <p className={styles.description}>
-          Get started by editing{' '}
-          <code className={styles.code}>pages/index.tsx</code>
-        </p>
-
-        <div className={styles.grid}>
-          <a href="https://nextjs.org/docs" className={styles.card}>
-            <h2>Documentation &rarr;</h2>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
-
-          <a href="https://nextjs.org/learn" className={styles.card}>
-            <h2>Learn &rarr;</h2>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/canary/examples"
-            className={styles.card}
-          >
-            <h2>Examples &rarr;</h2>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
-          </a>
-
-          <a
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.card}
-          >
-            <h2>Deploy &rarr;</h2>
-            <p>
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
-        </div>
-      </main>
-
-      <footer className={styles.footer}>
+      <footer className="footer">
         <a
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
+          href="https://github.com/Web3Auth/Web3Auth/tree/master/examples/react-app"
           target="_blank"
           rel="noopener noreferrer"
         >
-          Powered by{' '}
-          <span className={styles.logo}>
-            <Image src="/vercel.svg" alt="Vercel Logo" width={72} height={16} />
-          </span>
+          Source code
         </a>
       </footer>
     </div>
-  )
+  );
 }
